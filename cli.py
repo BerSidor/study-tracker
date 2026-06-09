@@ -1,43 +1,29 @@
 import argparse
+import json
 import sys
-from datetime import datetime
 from pathlib import Path
 
 from session import FileStore, SessionError, SessionManager
+from sheet_sync import SyncError, sync_session
+from sync_payload import build_sync_payload, fmt_hrs
 
 DATA_DIR = Path(__file__).parent / "data"
 
 
 def now() -> str:
+    from datetime import datetime
     return datetime.now().strftime("%H:%M")
 
 
-def minutes_between(start: str, end: str) -> int:
-    sh, sm = map(int, start.split(":"))
-    eh, em = map(int, end.split(":"))
-    start_mins = sh * 60 + sm
-    end_mins = eh * 60 + em
-    if end_mins < start_mins:   # midnight crossover
-        end_mins += 24 * 60
-    return end_mins - start_mins
+def print_session_summary(payload: dict) -> None:
+    topic_hrs: dict[str, float] = {}
+    for seg in payload["segments"]:
+        topic_hrs[seg["topic"]] = topic_hrs.get(seg["topic"], 0) + seg["durationHrs"]
 
-
-def fmt_duration(minutes: int) -> str:
-    h, m = divmod(minutes, 60)
-    return f"{h}h {m:02d}m" if h else f"{m}m"
-
-
-def print_session_summary(session: dict) -> None:
-    topic_minutes: dict[str, int] = {}
-    for seg in session["segments"]:
-        mins = minutes_between(seg["startTime"], seg["endTime"])
-        topic_minutes[seg["topic"]] = topic_minutes.get(seg["topic"], 0) + mins
-
-    total = sum(topic_minutes.values())
-    print(f"\nSession closed — {fmt_duration(total)} total")
-    width = max(len(t) for t in topic_minutes)
-    for topic, mins in topic_minutes.items():
-        print(f"  {topic:<{width}}  {fmt_duration(mins)}")
+    print(f"\nSession closed — {fmt_hrs(payload['durationHrs'])} total")
+    width = max(len(t) for t in topic_hrs)
+    for topic, hrs in topic_hrs.items():
+        print(f"  {topic:<{width}}  {fmt_hrs(hrs)}")
 
 
 def main():
@@ -58,7 +44,7 @@ def main():
     p_resume = sub.add_parser("resume", help="Resume the current session")
     p_resume.add_argument("time", nargs="?", default=None)
 
-    p_done = sub.add_parser("done", help="Close the current session")
+    p_done = sub.add_parser("done", help="Close the current session and sync the sheet")
     p_done.add_argument("time", nargs="?", default=None)
 
     args = parser.parse_args()
@@ -85,7 +71,16 @@ def main():
 
         elif args.command == "done":
             session = sm.close_session(t)
-            print_session_summary(session)
+            payload = build_sync_payload(session)
+            print_session_summary(payload)
+
+            config = json.loads((DATA_DIR / "config.json").read_text(encoding="utf-8"))
+            try:
+                sync_session(config["webAppUrl"], payload)
+                print(f"\nSheet updated: {config['sheetUrl']}")
+            except SyncError as e:
+                print(f"Sync failed: {e}", file=sys.stderr)
+                sys.exit(1)
 
     except SessionError as e:
         print(f"Error: {e}", file=sys.stderr)

@@ -12,18 +12,19 @@ All session state is managed by `cli.py`. Run commands from `study-tracker/`.
 | `switching to [topic] at HH:MM` | `python cli.py switch "<topic>" HH:MM` |
 | `pause` | `python cli.py pause` |
 | `resume` | `python cli.py resume` |
-| `done` / `stop` / `end` | `python cli.py done` → print output → sync sheet → return link |
+| `done` / `stop` / `end` | `python cli.py done` → prints summary + syncs sheet + prints link |
 | `done at HH:MM` | `python cli.py done HH:MM` |
 | `report` or `weekly report` | Sync sheet → return link (no cli.py call needed) |
 | `how many hours today` | Read `sessions.json` → inline summary only, no sheet update |
 | `check status` or `update status` | Run `toast-heartbeat.ps1` directly |
 | `set goal [N] hours` | Update `weeklyGoalHours` in `config.json` |
 
-`cli.py` prints the per-topic breakdown after `done` — relay it verbatim, then append the sheet link:
+`cli.py done` prints the per-topic breakdown and the sheet link in one step — relay the full output verbatim:
 ```
 Session closed — 2h 45m total
   Claude Code hooks  45m
   MCP servers        1h 10m
+
 Sheet updated: [link]
 ```
 
