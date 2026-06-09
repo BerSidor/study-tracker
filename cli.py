@@ -3,6 +3,7 @@ import json
 import sys
 from pathlib import Path
 
+from notifier import make_notifier
 from session import FileStore, SessionError, SessionManager
 from sheet_sync import SyncError, sync_session
 from sync_payload import build_sync_payload, fmt_hrs
@@ -51,23 +52,28 @@ def main():
     t = args.time if hasattr(args, "time") and args.time else now()
 
     sm = SessionManager(FileStore(DATA_DIR))
+    notifier = make_notifier()
 
     try:
         if args.command == "start":
             sm.start_session(args.topic, t)
             print(f"Session started — {args.topic} ({t})")
+            notifier.notify(f"Session started — {args.topic}")
 
         elif args.command == "switch":
             sm.switch_topic(args.topic, t)
             print(f"Switched to {args.topic} ({t})")
+            notifier.notify(f"Now studying: {args.topic}")
 
         elif args.command == "pause":
             sm.pause_session(t)
             print(f"Paused ({t})")
+            notifier.notify("Session paused")
 
         elif args.command == "resume":
             sm.resume_session(t)
             print(f"Resumed ({t})")
+            notifier.notify("Session resumed")
 
         elif args.command == "done":
             session = sm.close_session(t)
@@ -78,6 +84,7 @@ def main():
             try:
                 sync_session(config["webAppUrl"], payload)
                 print(f"\nSheet updated: {config['sheetUrl']}")
+                notifier.notify(f"Session saved — {fmt_hrs(payload['durationHrs'])}")
             except SyncError as e:
                 print(f"Sync failed: {e}", file=sys.stderr)
                 sys.exit(1)

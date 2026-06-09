@@ -1,6 +1,6 @@
-$raw     = [Console]::In.ReadToEnd()
-$data    = $raw | ConvertFrom-Json
-$path    = $data.tool_input.file_path
+$raw  = [Console]::In.ReadToEnd()
+$data = $raw | ConvertFrom-Json
+$path = $data.tool_input.file_path
 $dataDir = "C:\Users\berna\Claude_Code_Learning\study-tracker\data"
 
 function Format-Hrs($hrs) {
@@ -12,26 +12,28 @@ function Format-Hrs($hrs) {
     else                         { return "${m}m" }
 }
 
-function Get-TodayCompletedHrs($sessions) {
-    $today = Get-Date -Format "yyyy-MM-dd"
-    $sum = ($sessions | Where-Object { $_.date -eq $today } |
-            Measure-Object -Property durationHrs -Sum).Sum
-    return [double]$(if ($null -eq $sum) { 0 } else { $sum })
+function Get-SegmentMins($seg) {
+    if ($null -eq $seg.endTime) { return 0.0 }
+    $s    = [datetime]::ParseExact($seg.startTime, "HH:mm", $null)
+    $e    = [datetime]::ParseExact($seg.endTime,   "HH:mm", $null)
+    $diff = ($e - $s).TotalMinutes
+    if ($diff -lt 0) { $diff += 1440 }
+    return $diff
 }
 
-function Get-CurrentSessionHrs($session) {
-    $start   = [datetime]::ParseExact($session.startTime, "HH:mm", $null)
-    $now     = Get-Date
-    $elapsed = ($now - $start).TotalHours
-    foreach ($p in $session.pauses) {
-        $ps = [datetime]::ParseExact($p.startTime, "HH:mm", $null)
-        if ($null -ne $p.endTime) {
-            $elapsed -= ([datetime]::ParseExact($p.endTime, "HH:mm", $null) - $ps).TotalHours
-        } else {
-            $elapsed -= ($now - $ps).TotalHours
-        }
+function Get-SessionHrs($session) {
+    $total = 0.0
+    foreach ($seg in $session.segments) { $total += Get-SegmentMins $seg }
+    return $total / 60
+}
+
+function Get-TodayCompletedHrs($sessions) {
+    $today = Get-Date -Format "yyyy-MM-dd"
+    $total = 0.0
+    foreach ($s in ($sessions | Where-Object { $_.date -eq $today })) {
+        $total += Get-SessionHrs $s
     }
-    return [math]::Max(0.0, $elapsed)
+    return $total
 }
 
 function Build-ProgressXml($todayHrs, $targetHrs) {
@@ -42,41 +44,38 @@ function Build-ProgressXml($todayHrs, $targetHrs) {
     return "<progress value=""$pctStr"" title=""Today"" status=""$label"" valueStringOverride=""$disp""/>"
 }
 
-$config    = Get-Content "$dataDir\config.json" | ConvertFrom-Json
-$target    = [double]$config.dailyTargetHours
+$config = Get-Content "$dataDir\config.json" | ConvertFrom-Json
+$target = [double]$config.dailyTargetHours
 
 if ($path -match 'sessions\.json') {
-    $sessions  = $data.tool_input.content | ConvertFrom-Json
-    $last      = $sessions | Select-Object -Last 1
-    $todayHrs  = Get-TodayCompletedHrs $sessions
-    $message   = "Session saved - $(Format-Hrs $last.durationHrs)"
-    $progress  = Build-ProgressXml $todayHrs $target
+    $sessions = $data.tool_input.content | ConvertFrom-Json
+    $last     = $sessions | Select-Object -Last 1
+    $todayHrs = Get-TodayCompletedHrs $sessions
+    $message  = "Session saved — $(Format-Hrs (Get-SessionHrs $last))"
+    $progress = Build-ProgressXml $todayHrs $target
 
 } elseif ($path -match 'current-session\.json') {
-    $session   = $data.tool_input.content | ConvertFrom-Json
-    $pauses    = $session.pauses
-    $pastHrs   = Get-TodayCompletedHrs (Get-Content "$dataDir\sessions.json" | ConvertFrom-Json)
-    $curHrs    = Get-CurrentSessionHrs $session
-    $todayHrs  = $pastHrs + $curHrs
-    $progress  = Build-ProgressXml $todayHrs $target
+    $session  = $data.tool_input.content | ConvertFrom-Json
+    $lastSeg  = $session.segments | Select-Object -Last 1
+    $prevSeg  = if ($session.segments.Count -gt 1) { $session.segments[-2] } else { $null }
 
-    if ($pauses.Count -gt 0) {
-        $last = $pauses | Select-Object -Last 1
-        if ($null -eq $last.endTime) {
-            $message = "Session paused"
-        } else {
-            $ps       = [datetime]::ParseExact($last.startTime, "HH:mm", $null)
-            $pe       = [datetime]::ParseExact($last.endTime,   "HH:mm", $null)
-            $breakMin = [math]::Round(($pe - $ps).TotalMinutes)
-            $message  = "Session resumed - ${breakMin}m break"
-        }
+    $pastSessions = if (Test-Path "$dataDir\sessions.json") {
+        Get-Content "$dataDir\sessions.json" | ConvertFrom-Json
+    } else { @() }
+    $todayHrs = Get-TodayCompletedHrs $pastSessions
+    $progress = Build-ProgressXml $todayHrs $target
+
+    if ($null -ne $lastSeg.endTime) {
+        $message = "Session paused"
+    } elseif ($session.segments.Count -eq 1) {
+        $message = "Session started — $($lastSeg.topic)"
+    } elseif ($null -ne $prevSeg -and $prevSeg.topic -eq $lastSeg.topic) {
+        $breakStart = [datetime]::ParseExact($prevSeg.endTime,    "HH:mm", $null)
+        $breakEnd   = [datetime]::ParseExact($lastSeg.startTime,  "HH:mm", $null)
+        $breakMin   = [math]::Round(($breakEnd - $breakStart).TotalMinutes)
+        $message    = "Session resumed — ${breakMin}m break"
     } else {
-        $topic = ($session.segments | Select-Object -Last 1).topic
-        $message = if ($session.segments.Count -eq 1) {
-            "Session started - $topic"
-        } else {
-            "Now studying: $topic"
-        }
+        $message = "Now studying: $($lastSeg.topic)"
     }
 } else {
     exit 0
@@ -87,4 +86,6 @@ if ($path -match 'sessions\.json') {
 $xml = [Windows.Data.Xml.Dom.XmlDocument]::new()
 $xml.LoadXml("<toast><visual><binding template=""ToastGeneric""><text>$message</text>$progress</binding></visual></toast>")
 $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
-[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe").Show($toast)
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier(
+    "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe"
+).Show($toast)

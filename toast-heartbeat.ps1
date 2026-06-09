@@ -7,26 +7,33 @@ $sessions = Get-Content "$dataDir\sessions.json"        | ConvertFrom-Json
 $config   = Get-Content "$dataDir\config.json"          | ConvertFrom-Json
 $target   = [double]$config.dailyTargetHours
 $today    = Get-Date -Format "yyyy-MM-dd"
+$now      = Get-Date
 
-$pastHrs = [double]$(
-    $sum = ($sessions | Where-Object { $_.date -eq $today } |
-            Measure-Object -Property durationHrs -Sum).Sum
-    if ($null -eq $sum) { 0 } else { $sum }
-)
-
-$start   = [datetime]::Parse($session.startTime)
-$now     = Get-Date
-$elapsed = ($now - $start).TotalHours
-foreach ($p in $session.pauses) {
-    $ps = [datetime]::Parse($p.startTime)
-    if ($null -ne $p.endTime) {
-        $elapsed -= ([datetime]::Parse($p.endTime) - $ps).TotalHours
+function Get-SegmentMins($seg) {
+    $s = [datetime]::ParseExact($seg.startTime, "HH:mm", $null)
+    if ($null -ne $seg.endTime) {
+        $e    = [datetime]::ParseExact($seg.endTime, "HH:mm", $null)
+        $diff = ($e - $s).TotalMinutes
+        if ($diff -lt 0) { $diff += 1440 }   # midnight crossover
+        return $diff
     } else {
-        $elapsed -= ($now - $ps).TotalHours
+        return ($now - $s).TotalMinutes
     }
 }
-$curHrs   = [math]::Max(0.0, $elapsed)
-$todayHrs = $pastHrs + $curHrs
+
+# Past completed sessions today
+$pastMins = 0.0
+foreach ($s in ($sessions | Where-Object { $_.date -eq $today })) {
+    foreach ($seg in $s.segments) {
+        if ($null -ne $seg.endTime) { $pastMins += Get-SegmentMins $seg }
+    }
+}
+
+# Current open session
+$curMins = 0.0
+foreach ($seg in $session.segments) { $curMins += Get-SegmentMins $seg }
+
+$todayHrs = [math]::Max(0.0, ($pastMins + $curMins) / 60)
 
 $totalMin = [math]::Round($todayHrs * 60)
 $h = [math]::Floor($totalMin / 60); $m = $totalMin % 60
@@ -40,14 +47,16 @@ $pct    = [math]::Min(1.0, $todayHrs / $target)
 $pctStr = $pct.ToString("F2", [System.Globalization.CultureInfo]::InvariantCulture)
 $disp   = "$([math]::Round($pct * 100))%"
 
-$topic   = ($session.segments | Select-Object -Last 1).topic
-$paused  = ($session.pauses.Count -gt 0 -and $null -eq ($session.pauses | Select-Object -Last 1).endTime)
-$status  = if ($paused) { "Paused - $topic" } else { "Studying: $topic" }
-$status  = $status -replace '&', '&amp;'
+$lastSeg = $session.segments | Select-Object -Last 1
+$paused  = $null -ne $lastSeg.endTime
+$topic   = ($lastSeg.topic -replace '&', '&amp;')
+$status  = if ($paused) { "Paused — $topic" } else { "Studying: $topic" }
 
 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
 [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null
 $xml = [Windows.Data.Xml.Dom.XmlDocument]::new()
 $xml.LoadXml("<toast><visual><binding template=""ToastGeneric""><text>$status</text><progress value=""$pctStr"" title=""Today"" status=""$durStr of $tgtStr"" valueStringOverride=""$disp""/></binding></visual></toast>")
 $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
-[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe").Show($toast)
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier(
+    "{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\WindowsPowerShell\v1.0\powershell.exe"
+).Show($toast)
