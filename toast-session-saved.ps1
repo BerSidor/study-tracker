@@ -51,7 +51,7 @@ if ($path -match 'sessions\.json') {
     $sessions = $data.tool_input.content | ConvertFrom-Json
     $last     = $sessions | Select-Object -Last 1
     $todayHrs = Get-TodayCompletedHrs $sessions
-    $message  = "Session saved — $(Format-Hrs (Get-SessionHrs $last))"
+    $message  = "Session saved - $(Format-Hrs (Get-SessionHrs $last))"
     $progress = Build-ProgressXml $todayHrs $target
 
 } elseif ($path -match 'current-session\.json') {
@@ -68,12 +68,12 @@ if ($path -match 'sessions\.json') {
     if ($null -ne $lastSeg.endTime) {
         $message = "Session paused"
     } elseif ($session.segments.Count -eq 1) {
-        $message = "Session started — $($lastSeg.topic)"
+        $message = "Session started - $($lastSeg.topic)"
     } elseif ($null -ne $prevSeg -and $prevSeg.topic -eq $lastSeg.topic) {
         $breakStart = [datetime]::ParseExact($prevSeg.endTime,    "HH:mm", $null)
         $breakEnd   = [datetime]::ParseExact($lastSeg.startTime,  "HH:mm", $null)
         $breakMin   = [math]::Round(($breakEnd - $breakStart).TotalMinutes)
-        $message    = "Session resumed — ${breakMin}m break"
+        $message    = "Session resumed - ${breakMin}m break"
     } else {
         $message = "Now studying: $($lastSeg.topic)"
     }

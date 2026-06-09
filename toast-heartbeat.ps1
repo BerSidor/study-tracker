@@ -50,7 +50,7 @@ $disp   = "$([math]::Round($pct * 100))%"
 $lastSeg = $session.segments | Select-Object -Last 1
 $paused  = $null -ne $lastSeg.endTime
 $topic   = ($lastSeg.topic -replace '&', '&amp;')
-$status  = if ($paused) { "Paused — $topic" } else { "Studying: $topic" }
+$status  = if ($paused) { "Paused - $topic" } else { "Studying: $topic" }
 
 [Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
 [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null

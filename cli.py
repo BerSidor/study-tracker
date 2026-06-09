@@ -58,7 +58,7 @@ def main():
         if args.command == "start":
             sm.start_session(args.topic, t)
             print(f"Session started — {args.topic} ({t})")
-            notifier.notify(f"Session started — {args.topic}")
+            notifier.notify(f"Session started - {args.topic}")
 
         elif args.command == "switch":
             sm.switch_topic(args.topic, t)
@@ -84,7 +84,7 @@ def main():
             try:
                 sync_session(config["webAppUrl"], payload)
                 print(f"\nSheet updated: {config['sheetUrl']}")
-                notifier.notify(f"Session saved — {fmt_hrs(payload['durationHrs'])}")
+                notifier.notify(f"Session saved - {fmt_hrs(payload['durationHrs'])}")
             except SyncError as e:
                 print(f"Sync failed: {e}", file=sys.stderr)
                 sys.exit(1)
