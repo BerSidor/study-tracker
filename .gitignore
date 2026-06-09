@@ -1,0 +1,7 @@
+# Personal data — never commit
+data/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/

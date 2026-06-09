@@ -1,0 +1,8 @@
+{
+  "webAppUrl": "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec",
+  "sheetUrl": "https://docs.google.com/spreadsheets/d/YOUR_SHEET_ID/edit",
+  "weeklyGoalHours": 40,
+  "dailyTargetHours": 6.67,
+  "studyDays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+  "weekStartDay": "Monday"
+}
