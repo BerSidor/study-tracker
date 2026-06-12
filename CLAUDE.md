@@ -1,5 +1,17 @@
 # Study Tracker — Claude Code Context
 
+## Web UI (Forest Dawn)
+
+A local browser dashboard at `http://127.0.0.1:8766/` — starts automatically at Windows
+logon via `StudyTrackerUI.vbs` in the user's Startup folder (runs `pythonw web\server.py
+--no-browser`, silent, no console). Manual launch: `start-ui.bat` (or `python
+web\server.py`; add `--no-sync` to skip sheet sync while testing). Starting a second
+instance is harmless — it exits if the port is taken.
+It can start/switch/pause/resume/end sessions and shows live daily/weekly progress,
+today's plan, and full history. The server is a legitimate writer alongside `cli.py`:
+both go through the same `SessionManager` and database, and the UI picks up external
+changes within ~2 seconds, so chat commands and browser buttons can be mixed freely.
+
 ## Session Commands
 
 All session state is managed by `cli.py`. Run commands from `study-tracker/`.
@@ -15,7 +27,7 @@ All session state is managed by `cli.py`. Run commands from `study-tracker/`.
 | `done` / `stop` / `end` | `python cli.py done` → prints summary + syncs sheet + prints link |
 | `done at HH:MM` | `python cli.py done HH:MM` |
 | `report` or `weekly report` | Sync sheet → return link (no cli.py call needed) |
-| `how many hours today` | Read `sessions.json` → inline summary only, no sheet update |
+| `how many hours today` | `python cli.py today` → prints decimal hours of completed sessions; format it nicely |
 | `check status` or `update status` | Run `toast-heartbeat.ps1` directly |
 | `set goal [N] hours` | Update `weeklyGoalHours` in `config.json` |
 
@@ -28,7 +40,8 @@ Session closed — 2h 45m total
 Sheet updated: [link]
 ```
 
-Do not edit `current-session.json` or `sessions.json` directly — all writes go through `cli.py`.
+Do not edit `current-session.json` or `sessions.db` directly — all writes go through
+`cli.py` or the web UI server (both share the same `SessionManager` + database).
 
 ## Time Handling
 
@@ -43,7 +56,7 @@ All data lives in `C:\Users\berna\Claude_Code_Learning\study-tracker\data\`:
 
 | File | Purpose |
 |---|---|
-| `sessions.json` | Completed sessions — source of truth |
+| `sessions.db` | Completed sessions — source of truth (SQLite; was `sessions.json`, kept as `sessions.json.bak`) |
 | `current-session.json` | Active session state (deleted on close) |
 | `config.json` | Web App URL, sheet URL, weekly goal, study days |
 | `roadmap.json` | Three-track learning curriculum with hours logged |

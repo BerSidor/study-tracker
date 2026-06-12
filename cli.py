@@ -3,9 +3,11 @@ import json
 import sys
 from pathlib import Path
 
+from db import DbStore
 from notifier import make_notifier
-from session import FileStore, SessionError, SessionManager
+from session import SessionError, SessionManager
 from sheet_sync import SyncError, sync_session
+from stats import hours_for_date
 from sync_payload import build_sync_payload, fmt_hrs
 
 DATA_DIR = Path(__file__).parent / "data"
@@ -48,13 +50,22 @@ def main():
     p_done = sub.add_parser("done", help="Close the current session and sync the sheet")
     p_done.add_argument("time", nargs="?", default=None)
 
+    sub.add_parser("today", help="Print today's completed hours as a decimal")
+
     args = parser.parse_args()
     t = args.time if hasattr(args, "time") and args.time else now()
 
-    sm = SessionManager(FileStore(DATA_DIR))
+    store = DbStore(DATA_DIR)
+    sm = SessionManager(store)
     notifier = make_notifier()
 
     try:
+        if args.command == "today":
+            from datetime import datetime
+            today = datetime.now().strftime("%Y-%m-%d")
+            print(f"{hours_for_date(store.read_all_completed(), today):.4f}")
+            return
+
         if args.command == "start":
             sm.start_session(args.topic, t)
             print(f"Session started — {args.topic} ({t})")

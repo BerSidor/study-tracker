@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Study Tracker — Forest Dawn</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='13' font-size='13'>🌲</text></svg>">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- Enchanted forest: dark canopy frame, glowing clearing, bushes, flowers, fireflies -->
+<svg id="landscape" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <defs>
+    <linearGradient id="depths" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f2b33"/>
+      <stop offset=".5" stop-color="#1c4a40"/>
+      <stop offset="1" stop-color="#24523f"/>
+    </linearGradient>
+    <radialGradient id="clearing" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#f1eb9c" stop-opacity=".95"/>
+      <stop offset=".45" stop-color="#d9e082" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#d9e082" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rayFade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7f1ae" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#f7f1ae" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#depths)"/>
+  <ellipse cx="800" cy="430" rx="720" ry="480" fill="url(#clearing)"/>
+
+  <!-- thin distant trunks inside the glow -->
+  <g id="distant-trunks" fill="#477a66" opacity=".4"></g>
+
+  <!-- light shafts through the canopy -->
+  <polygon points="700,0 760,0 580,560 480,560" fill="url(#rayFade)"/>
+  <polygon points="820,0 900,0 880,600 740,600" fill="url(#rayFade)"/>
+  <polygon points="960,0 1010,0 1180,540 1080,540" fill="url(#rayFade)"/>
+
+  <!-- foliage layers (filled by app.js) -->
+  <g id="canopy-far" fill="#235247" opacity=".9"></g>
+  <g id="canopy-dark" fill="#11313a"></g>
+
+  <!-- framing trees -->
+  <path fill="#0d262d" d="M60,900 L105,430 Q112,300 92,150 L100,80 L170,90 Q165,240 185,400 L235,900 Z"/>
+  <path fill="#0d262d" d="M1380,900 L1420,420 Q1428,280 1410,140 L1418,70 L1492,84 Q1488,230 1505,390 L1555,900 Z"/>
+  <path fill="#16383b" d="M300,900 L322,520 Q326,430 318,340 L362,346 Q360,450 368,540 L396,900 Z"/>
+  <path fill="#16383b" d="M1230,900 L1248,540 Q1252,460 1246,380 L1284,386 Q1282,470 1290,545 L1314,900 Z"/>
+
+  <!-- undergrowth (filled by app.js) -->
+  <g id="bush-mid" fill="#2e5f4a"></g>
+  <g id="bush-glow" fill="#5a8a5e" opacity=".75"></g>
+  <g id="bush-low" fill="#26513f"></g>
+  <ellipse cx="800" cy="880" rx="430" ry="70" fill="#7a9059" opacity=".35"/>
+  <g id="bush-front" fill="#173a30"></g>
+  <g id="flowers"></g>
+  <g id="fireflies"></g>
+</svg>
+
+<nav id="siderail">
+  <button class="rail-btn active" data-view="today">Today</button>
+  <button class="rail-btn" data-view="plan">Plan</button>
+  <button class="rail-btn" data-view="history">History</button>
+</nav>
+
+<main>
+  <header class="card row">
+    <div>
+      <h1>Forest Study</h1>
+      <div class="sub" id="plan-badge">—</div>
+    </div>
+    <div class="header-right">
+      <div class="clock mono" id="clock">--:--:--</div>
+      <div class="sub" id="date-line">—</div>
+      <span class="pill warn hidden" id="sync-off">sheet sync off</span>
+    </div>
+  </header>
+
+  <!-- ======== TODAY (default view: only the essentials) ======== -->
+  <div class="view" id="view-today">
+
+    <section class="card" id="session-card">
+      <div class="row">
+        <div>
+          <div class="status-line">
+            <span class="lamp" id="lamp"></span>
+            <span id="status-word">Resting</span>
+          </div>
+          <div class="topic" id="topic-line">No session — the forest is quiet.</div>
+        </div>
+        <div class="timer mono" id="timer">0:00:00</div>
+      </div>
+
+      <div class="chips" id="segment-chips"></div>
+
+      <div class="controls">
+        <button class="btn primary" id="btn-start">Start</button>
+        <button class="btn" id="btn-switch">Switch topic</button>
+        <button class="btn" id="btn-pause">Pause</button>
+        <button class="btn" id="btn-resume">Resume</button>
+        <button class="btn end" id="btn-end">End session</button>
+      </div>
+
+      <form class="topic-form hidden" id="topic-form">
+        <input id="topic-input" list="topic-options" placeholder="What are you studying?" autocomplete="off">
+        <datalist id="topic-options"></datalist>
+        <button class="btn primary" type="submit" id="topic-go">Go</button>
+        <button class="btn" type="button" id="topic-cancel">Cancel</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="bar-block">
+        <div class="bar-head"><span>Today</span><span class="mono" id="today-label">—</span></div>
+        <div class="bar"><div class="fill" id="today-fill"></div></div>
+      </div>
+      <div class="bar-block">
+        <div class="bar-head"><span>This week</span><span class="mono" id="week-label">—</span></div>
+        <div class="bar"><div class="fill week" id="week-fill"></div></div>
+      </div>
+    </section>
+
+    <section class="card" id="today-plan">
+      <h2 id="today-plan-title">Today's plan</h2>
+      <div id="today-plan-body" class="plan-bullets"></div>
+    </section>
+  </div>
+
+  <!-- ======== PLAN ======== -->
+  <div class="view hidden" id="view-plan">
+    <section class="card" id="tab-plan"></section>
+  </div>
+
+  <!-- ======== HISTORY ======== -->
+  <div class="view hidden" id="view-history">
+    <section class="card" id="tab-history"></section>
+  </div>
+</main>
+
+<!-- End-session modal -->
+<div class="overlay hidden" id="end-overlay">
+  <div class="modal card">
+    <h2>End session?</h2>
+    <div id="end-preview"></div>
+    <div class="controls">
+      <button class="btn end" id="end-confirm">End &amp; save</button>
+      <button class="btn" id="end-cancel">Keep studying</button>
+    </div>
+    <div class="sub" id="end-note"></div>
+  </div>
+</div>
+
+<div id="notes"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

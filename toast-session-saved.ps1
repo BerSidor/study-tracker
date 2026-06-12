@@ -59,10 +59,11 @@ if ($path -match 'sessions\.json') {
     $lastSeg  = $session.segments | Select-Object -Last 1
     $prevSeg  = if ($session.segments.Count -gt 1) { $session.segments[-2] } else { $null }
 
-    $pastSessions = if (Test-Path "$dataDir\sessions.json") {
-        Get-Content "$dataDir\sessions.json" | ConvertFrom-Json
-    } else { @() }
-    $todayHrs = Get-TodayCompletedHrs $pastSessions
+    $trackerDir = Split-Path $dataDir -Parent
+    $todayHrs = [double]::Parse(
+        (python "$trackerDir\cli.py" today),
+        [System.Globalization.CultureInfo]::InvariantCulture
+    )
     $progress = Build-ProgressXml $todayHrs $target
 
     if ($null -ne $lastSeg.endTime) {

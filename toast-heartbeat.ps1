@@ -1,12 +1,11 @@
-$dataDir = "C:\Users\berna\Claude_Code_Learning\study-tracker\data"
+$trackerDir = "C:\Users\berna\Claude_Code_Learning\study-tracker"
+$dataDir = "$trackerDir\data"
 
 if (-not (Test-Path "$dataDir\current-session.json")) { exit 0 }
 
 $session  = Get-Content "$dataDir\current-session.json" | ConvertFrom-Json
-$sessions = Get-Content "$dataDir\sessions.json"        | ConvertFrom-Json
 $config   = Get-Content "$dataDir\config.json"          | ConvertFrom-Json
 $target   = [double]$config.dailyTargetHours
-$today    = Get-Date -Format "yyyy-MM-dd"
 $now      = Get-Date
 
 function Get-SegmentMins($seg) {
@@ -21,13 +20,11 @@ function Get-SegmentMins($seg) {
     }
 }
 
-# Past completed sessions today
-$pastMins = 0.0
-foreach ($s in ($sessions | Where-Object { $_.date -eq $today })) {
-    foreach ($seg in $s.segments) {
-        if ($null -ne $seg.endTime) { $pastMins += Get-SegmentMins $seg }
-    }
-}
+# Past completed sessions today (from sessions.db via the CLI)
+$pastMins = [double]::Parse(
+    (python "$trackerDir\cli.py" today),
+    [System.Globalization.CultureInfo]::InvariantCulture
+) * 60
 
 # Current open session
 $curMins = 0.0
