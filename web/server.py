@@ -1,11 +1,12 @@
 """Local web UI for the study tracker.
 
 Serves the Forest Dawn dashboard and a JSON API over the same stores cli.py
-uses, so the browser and Claude Code chat stay in sync through the database
-and current-session.json. Run: python web/server.py [--port 8766] [--no-sync]
+uses, so the browser and Claude Code chat stay in sync through the database.
+Run: python web/server.py [--port 8766] [--no-sync]
 """
 import argparse
 import json
+import os
 import re
 import sys
 import threading
@@ -14,12 +15,16 @@ from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import winreg
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import planparse
+import session_note
 import stats
 from db import DbStore
+from duration import active_minutes
 from session import SessionError, SessionManager
 from sheet_sync import SyncError, sync_session
 from sync_payload import build_sync_payload
@@ -36,6 +41,37 @@ SM = SessionManager(STORE)
 SYNC_ENABLED = True
 
 
+TRANSCRIPT_DIR = Path.home() / ".claude" / "projects" / "C--Users-berna-Claude-Code-Learning"
+NOTES_PATH = ROOT / "notes.txt"
+NOTE_LOG = ROOT / "note_errors.log"
+
+
+def _ensure_api_key() -> None:
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment") as k:
+                os.environ["ANTHROPIC_API_KEY"] = winreg.QueryValueEx(k, "ANTHROPIC_API_KEY")[0]
+        except OSError:
+            pass
+
+
+def _write_session_note() -> None:
+    try:
+        _ensure_api_key()
+        transcripts = sorted(TRANSCRIPT_DIR.glob("*.jsonl"), key=lambda p: p.stat().st_mtime)
+        if not transcripts:
+            return
+        text = session_note.transcript_to_text(
+            transcripts[-1].read_text(encoding="utf-8").splitlines()
+        )
+        if not text:
+            return
+        session_note.append_note(NOTES_PATH, session_note.summarize(text))
+    except Exception as exc:
+        with open(NOTE_LOG, "a", encoding="utf-8") as f:
+            f.write(f"{datetime.now().isoformat()} ERROR: {exc}\n")
+
+
 def now_hhmm() -> str:
     return datetime.now().strftime("%H:%M")
 
@@ -49,8 +85,10 @@ def mtime(path: Path) -> float:
 
 
 def version() -> dict:
+    """Mtimes the frontend polls to decide what to re-fetch. Session state
+    (start/switch/pause/resume/close) now all lives in sessions.db, so its
+    mtime changes on every action, not just close — see ADR-0002."""
     return {
-        "current": mtime(DATA_DIR / "current-session.json"),
         "sessions": mtime(DATA_DIR / "sessions.db"),
         "plans": max((mtime(p) for p in PLANS_DIR.glob("week*-daily.md")), default=0),
         "config": mtime(DATA_DIR / "config.json"),
@@ -96,7 +134,7 @@ def enrich_session(session: dict) -> dict:
     prev_end = None
     for seg in session["segments"]:
         mins = (
-            stats._minutes_between(seg["startTime"], seg["endTime"])
+            active_minutes(seg["startTime"], seg["endTime"])
             if seg["endTime"] is not None
             else 0
         )
@@ -154,8 +192,7 @@ def do_session_action(action: str, body: dict) -> "tuple[int, dict]":
     if action in ("start", "switch") and not topic:
         return 400, {"error": "A topic is required."}
 
-    # No Windows toasts here — the browser shows its own in-page
-    # notifications; cli.py keeps toasts for chat-driven commands.
+    # The browser shows its own in-page notifications for these actions.
     with LOCK:
         if action == "start":
             SM.start_session(topic, t)
@@ -167,6 +204,7 @@ def do_session_action(action: str, body: dict) -> "tuple[int, dict]":
             SM.resume_session(t)
         elif action == "end":
             session = SM.close_session(t)
+            threading.Thread(target=_write_session_note, daemon=True).start()
             payload = build_sync_payload(session)
             config = load_config()
             synced = False

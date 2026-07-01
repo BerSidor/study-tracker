@@ -1,17 +1,28 @@
 # Learning Roadmap
 
-Three tracks aligned to the summer goal. Tracked in `roadmap.json`.
+Four tracks aligned to the **8-week summer goal**: master Claude Code and exit with a validated
+startup thesis. Build-first — every topic ships an artifact. See `docs/startup-study-plan.md`
+for the week-by-week plan. Tracked in `roadmap.json`.
 
 ## Track 1 — Claude Code
-CLI basics & configuration → CLAUDE.md & project context → Tool use & permissions →
-Hooks system → MCP servers → Subagents & multi-agent workflows → Building a project end-to-end
+CLI basics & configuration → CLAUDE.md & project context → Tool use & permissions → Hooks
+system → MCP servers → Subagents & multi-agent workflows → Skills, plugins & slash commands →
+Agent SDK (headless automation)
 
-## Track 2 — AI/ML Foundations
-Prompt engineering → RAG systems → Agent architectures → LLM evaluation basics → Fine-tuning overview
+## Track 2 — AI/ML & Architecture
+Prompt engineering → RAG systems → Agent architectures → LLM evaluation basics → AI system
+design patterns → Anthropic API & cost economics
 
-## Track 3 — Business Ideation
-AI product research & trends → Competitor & market analysis → MVP scoping with Claude Code →
-Business model basics
+## Track 3 — Build & Ship
+MCP server (published) → RAG tool → Multi-agent workflow → Deployed end-to-end app
+*(These are the portfolio pieces — proof you can ship.)*
+
+## Track 4 — Freelance & Niche Discovery
+Freelance setup → Client gigs & delivery → Discovery log upkeep → AI product research & trends →
+Competitor & market analysis → Business model basics → Customer conversations → MVP scoping with
+Claude Code → Startup thesis & MVP scope
+*(Gigs double as market research; the niche emerges in the Discovery Log — see
+`data/discovery-log.md`.)*
 
 ## Topic Recommendation Logic
 

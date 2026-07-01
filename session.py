@@ -4,36 +4,76 @@ from datetime import datetime
 from pathlib import Path
 from typing import Protocol
 
+from duration import DurationError, active_minutes
+
 
 class SessionError(Exception):
     pass
 
 
-class Store(Protocol):
+class CurrentSessionStore(Protocol):
+    """The single active session, kept where external watchers can read it."""
     def read_current(self) -> "dict | None": ...
     def write_current(self, session: dict) -> None: ...
     def delete_current(self) -> None: ...
+
+
+class CompletedSessionStore(Protocol):
+    """The archive of finished sessions."""
     def read_all_completed(self) -> "list[dict]": ...
     def append_completed(self, session: dict) -> None: ...
 
 
-class FileStore:
+class Store(CurrentSessionStore, CompletedSessionStore, Protocol):
+    """Everything SessionManager needs: the active session plus the archive.
+
+    These are two independent seams — the active session lives wherever external
+    watchers can read it (a file), the archive wherever queries are cheap (SQLite in
+    production). Adapters *compose* the two via CurrentSessionFile rather than fusing
+    them by inheritance.
+    """
+
+
+class CurrentSessionFile:
+    """The active session as current-session.json.
+
+    Kept as a plain file on purpose: external watchers (toast scripts, Claude Code
+    status checks) read live session state from it. Shared by every Store adapter so
+    the active-session-on-disk logic lives in exactly one place.
+    """
+
     def __init__(self, data_dir):
-        self._dir = Path(data_dir)
-        self._current_path = self._dir / "current-session.json"
-        self._completed_path = self._dir / "sessions.json"
+        self._path = Path(data_dir) / "current-session.json"
 
     def read_current(self) -> "dict | None":
-        if not self._current_path.exists():
+        if not self._path.exists():
             return None
-        return json.loads(self._current_path.read_text(encoding="utf-8"))
+        return json.loads(self._path.read_text(encoding="utf-8"))
 
     def write_current(self, session: dict) -> None:
-        self._current_path.write_text(json.dumps(session, indent=2), encoding="utf-8")
+        self._path.write_text(json.dumps(session, indent=2), encoding="utf-8")
 
     def delete_current(self) -> None:
-        if self._current_path.exists():
-            os.remove(self._current_path)
+        if self._path.exists():
+            os.remove(self._path)
+
+
+class FileStore:
+    """Full file-backed Store: active session in current-session.json, archive in
+    sessions.json. The no-database reference adapter, used in tests."""
+
+    def __init__(self, data_dir):
+        self._current = CurrentSessionFile(data_dir)
+        self._completed_path = Path(data_dir) / "sessions.json"
+
+    def read_current(self) -> "dict | None":
+        return self._current.read_current()
+
+    def write_current(self, session: dict) -> None:
+        self._current.write_current(session)
+
+    def delete_current(self) -> None:
+        self._current.delete_current()
 
     def read_all_completed(self) -> "list[dict]":
         if not self._completed_path.exists():
@@ -57,6 +97,12 @@ class SessionManager:
     def _close_open_segment(self, session: dict, time: str) -> None:
         for seg in session["segments"]:
             if seg["endTime"] is None:
+                try:
+                    active_minutes(seg["startTime"], time)  # validates via the Duration rule
+                except DurationError:
+                    raise SessionError(
+                        f"End time {time} is before segment start {seg['startTime']}."
+                    )
                 seg["endTime"] = time
                 return
 

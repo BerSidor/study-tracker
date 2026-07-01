@@ -16,22 +16,22 @@ changes within ~2 seconds, so chat commands and browser buttons can be mixed fre
 
 All session state is managed by `cli.py`. Run commands from `study-tracker/`.
 
-| What you say | Command to run |
-|---|---|
-| `start [topic]` or `start studying [topic]` | `python cli.py start "<topic>"` |
-| `started at HH:MM` (in the start message) | `python cli.py start "<topic>" HH:MM` |
-| `switching to [topic]` or `now [topic]` | `python cli.py switch "<topic>"` |
-| `switching to [topic] at HH:MM` | `python cli.py switch "<topic>" HH:MM` |
-| `pause` | `python cli.py pause` |
-| `resume` | `python cli.py resume` |
-| `done` / `stop` / `end` | `python cli.py done` → prints summary + syncs sheet + prints link |
-| `done at HH:MM` | `python cli.py done HH:MM` |
-| `report` or `weekly report` | Sync sheet → return link (no cli.py call needed) |
-| `how many hours today` | `python cli.py today` → prints decimal hours of completed sessions; format it nicely |
-| `check status` or `update status` | Run `toast-heartbeat.ps1` directly |
-| `set goal [N] hours` | Update `weeklyGoalHours` in `config.json` |
+| What you say                                | Command to run                                                                       |
+| ------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `start [topic]` or `start studying [topic]` | `python cli.py start "<topic>"`                                                      |
+| `started at HH:MM` (in the start message)   | `python cli.py start "<topic>" HH:MM`                                                |
+| `switching to [topic]` or `now [topic]`     | `python cli.py switch "<topic>"`                                                     |
+| `switching to [topic] at HH:MM`             | `python cli.py switch "<topic>" HH:MM`                                               |
+| `pause`                                     | `python cli.py pause`                                                                |
+| `resume`                                    | `python cli.py resume`                                                               |
+| `done` / `stop` / `end`                     | `python cli.py done` → prints summary + syncs sheet + prints link                    |
+| `done at HH:MM`                             | `python cli.py done HH:MM`                                                           |
+| `report` or `weekly report`                 | Sync sheet → return link (no cli.py call needed)                                     |
+| `how many hours today`                      | `python cli.py today` → prints decimal hours of completed sessions; format it nicely |
+| `set goal [N] hours`                        | Update `weeklyGoalHours` in `config.json`                                            |
 
 `cli.py done` prints the per-topic breakdown and the sheet link in one step — relay the full output verbatim:
+
 ```
 Session closed — 2h 45m total
   Claude Code hooks  45m
@@ -40,8 +40,8 @@ Session closed — 2h 45m total
 Sheet updated: [link]
 ```
 
-Do not edit `current-session.json` or `sessions.db` directly — all writes go through
-`cli.py` or the web UI server (both share the same `SessionManager` + database).
+Do not edit `sessions.db` directly — all writes go through `cli.py` or the web UI
+server (both share the same `SessionManager` + database).
 
 ## Time Handling
 
@@ -54,12 +54,11 @@ Do not edit `current-session.json` or `sessions.db` directly — all writes go t
 
 All data lives in `C:\Users\berna\Claude_Code_Learning\study-tracker\data\`:
 
-| File | Purpose |
-|---|---|
-| `sessions.db` | Completed sessions — source of truth (SQLite; was `sessions.json`, kept as `sessions.json.bak`) |
-| `current-session.json` | Active session state (deleted on close) |
-| `config.json` | Web App URL, sheet URL, weekly goal, study days |
-| `roadmap.json` | Three-track learning curriculum with hours logged |
+| File           | Purpose                                                                                                                                  |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `sessions.db`  | All session state, source of truth (SQLite) — the active session is the row with a NULL end time; every other row is a completed session |
+| `config.json`  | Web App URL, sheet URL, weekly goal, study days                                                                                          |
+| `roadmap.json` | Three-track learning curriculum with hours logged                                                                                        |
 
 ## Reference Docs
 

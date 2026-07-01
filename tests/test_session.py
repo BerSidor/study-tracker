@@ -113,6 +113,69 @@ def test_switch_while_idle_raises():
         sm.switch_topic("Claude Code hooks", "10:00")
 
 
+# ── reversed-time guard ────────────────────────────────────────────────────────
+
+class MockStore(InMemoryStore):
+    """InMemoryStore that records every write so tests can assert no write happened."""
+    def __init__(self):
+        super().__init__()
+        self.write_count = 0
+
+    def write_current(self, session):
+        self.write_count += 1
+        super().write_current(session)
+
+
+class TestReversedTimeGuard:
+    """Every path through _close_open_segment must reject endTime < startTime."""
+
+    def _sm(self, start="14:57"):
+        store = MockStore()
+        sm = SessionManager(store)
+        sm.start_session("AI Coding", start, date="2026-06-09")
+        return sm, store
+
+    def test_pause_before_start_raises(self):
+        sm, store = self._sm("14:57")
+        writes_before = store.write_count
+        with pytest.raises(SessionError, match="before segment start"):
+            sm.pause_session("14:37")
+        assert store.write_count == writes_before
+
+    def test_switch_before_start_raises(self):
+        sm, store = self._sm("14:57")
+        writes_before = store.write_count
+        with pytest.raises(SessionError, match="before segment start"):
+            sm.switch_topic("MCPs", "14:37")
+        assert store.write_count == writes_before
+
+    def test_close_before_start_raises(self):
+        sm, store = self._sm("14:57")
+        writes_before = store.write_count
+        with pytest.raises(SessionError, match="before segment start"):
+            sm.close_session("14:37")
+        assert store.write_count == writes_before
+
+    def test_segment_remains_open_after_rejection(self):
+        sm, store = self._sm("14:57")
+        with pytest.raises(SessionError):
+            sm.pause_session("14:37")
+        current = store.read_current()
+        assert current["segments"][-1]["endTime"] is None
+
+    def test_midnight_crossing_is_allowed(self):
+        sm, store = self._sm("23:04")
+        sm.close_session("00:08")  # crosses midnight — ~1h gap
+
+    def test_exact_same_time_is_allowed(self):
+        sm, store = self._sm("14:57")
+        sm.pause_session("14:57")
+
+    def test_later_time_is_allowed(self):
+        sm, store = self._sm("09:00")
+        sm.pause_session("10:30")
+
+
 # ── FileStore ──────────────────────────────────────────────────────────────────
 
 def test_file_store_persists_session_across_instances(tmp_path):

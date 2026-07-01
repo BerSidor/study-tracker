@@ -5,13 +5,13 @@ midnight; the week runs Monday-Saturday and Sunday never counts toward the goal.
 """
 from datetime import date, datetime, timedelta
 
-from sync_payload import _minutes_between
+from duration import active_minutes
 
 
 def session_hours(session: dict) -> float:
     """Active hours of a session: sum of its closed segments."""
     mins = sum(
-        _minutes_between(seg["startTime"], seg["endTime"])
+        active_minutes(seg["startTime"], seg["endTime"])
         for seg in session["segments"]
         if seg["endTime"] is not None
     )

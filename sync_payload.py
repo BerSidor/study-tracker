@@ -1,14 +1,6 @@
 from datetime import datetime
 
-
-def _minutes_between(start: str, end: str) -> int:
-    sh, sm = map(int, start.split(":"))
-    eh, em = map(int, end.split(":"))
-    start_mins = sh * 60 + sm
-    end_mins = eh * 60 + em
-    if end_mins < start_mins:   # midnight crossover
-        end_mins += 24 * 60
-    return end_mins - start_mins
+from duration import active_minutes
 
 
 def _day_name(date: str) -> str:
@@ -19,7 +11,7 @@ def build_sync_payload(session: dict) -> dict:
     segments = []
     total_mins = 0
     for seg in session["segments"]:
-        mins = _minutes_between(seg["startTime"], seg["endTime"])
+        mins = active_minutes(seg["startTime"], seg["endTime"])
         total_mins += mins
         segments.append({"topic": seg["topic"], "durationHrs": round(mins / 60, 6)})
 

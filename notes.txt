@@ -1,0 +1,40 @@
+2026-06-15 15:21 | Study session — no transcript available
+2026-06-15 23:09 | I see the issue — the folder creation command didn't actually execute. Let me create it properly now and you can navigate into it:
+
+```powershell
+mkdir C:\Users\berna\Claude_Code_Learning\App_Jogo_Brasil
+cd C:\Users\berna\Claude_Code_Learning\App_Jogo_Brasil
+```
+
+Run
+2026-06-17 10:05 | Hook implementation — PostToolUse event with prettier formatter, discovery of hook parameter complexity and JSON stdout confusion, prettier installed to project root.
+2026-06-17 22:32 | MCP server configuration debugging and JSON-RPC protocol understanding — tested stdio transport, tool schema generation, and client-server handshake mechanics
+2026-06-18 19:12 | Study session — no transcript available
+2026-06-18 19:31 | MCP server debugging — fixed quiz_bank ToolError import path from utilities.types to exceptions module
+2026-06-19 17:44 | Bet identification & device linking — fixed email-linking on existing bets and leaderboard email-switcher to resolve cross-tab prediction conflicts.
+2026-06-22 14:01 | Bet prediction device-linking & leaderboard multi-user viewing — fixed device-email association on existing bet identification, added leaderboard "Não é você?" switcher, and verified production deploy.
+2026-06-23 09:20 | Study session transcript analysis complete.
+
+**Claude Code Learning — Week 2 Day 2: Tool Schemas, Validation & Errors — JSON Schema design, Pydantic Field constraints, ToolError exception handling**
+2026-06-24 02:20 | MCP tool layering & error boundaries — separation of protocol concerns from business logic, schema-as-prompt, error translation at seams, path traversal prevention via chokepoint, audit logging via SDK hooking.
+2026-06-25 13:26 | Weather API wrapper — API key from environment, transient error retry with cap, permanent errors with actionable feedback to Claude.
+2026-06-26 14:39 | Back with the findings:
+
+| Option | Existing Server | Status |
+|--------|-----------------|--------|
+| **Polygon.io (stocks)** | None found; 1 abandoned attempt | ✅ **Clear** |
+| **Brave Search API** | None (official; Brave discourages automated MCP wraps) | ✅
+2026-06-28 14:02 | **MCP Server maintenance SaaS — a viable niche, but harder than it looks.** Three hard truths:
+
+1. **Requires a best-in-category server to start.** You can't charge for maintaining a mediocre MCP — people will fork it or use the dozen alternatives. The SEC EDGAR / GSC / Brazil data angles were weak *
+2026-06-29 16:42 | Exactly right instinct — **state management** is the first domino that falls. Once you're one server, many users, you have to care about:
+
+- **Isolation:** User A's query doesn't leak data to User B.
+- **Consistency:** Two concurrent requests don't corrupt the DB.
+- **Cleanup:** Sessions end; resources get released.
+2026-06-30 13:03 | SQLite database server with parameterized queries, input validation, and layered architecture (repository/service/MCP adapter) — tested against SQL injection.
+2026-06-30 21:33 | I cannot write a summary because the transcript contains only a `/clear` command with no actual study or build content. There is nothing substantive to summarize.
+2026-06-30 22:50 | I don't see any actual study session content in the transcript provided—only a clear command with no substantive work documented. I cannot write a meaningful summary without content to summarize.
+
+If you have a transcript with actual study material or project work, please share that and I'll provide the one-line summary in the format you requested.
+2026-07-01 12:21 | Session-storage refactor — migrated active session from `current-session.json` into `sessions.db` as a row with NULL `end_time`, unified persistence into one seam, updated `SessionManager.append`/`delete_current`, rewrote schema & tests, validated against live data.

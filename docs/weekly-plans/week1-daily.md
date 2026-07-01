@@ -41,7 +41,7 @@ ratio is intentional — you learn this tool by driving it, not reading about it
 - **Build (4h):** **start your fresh Week-1 project** (a small throwaway app/tool). Write its
   `CLAUDE.md` from scratch: project purpose, conventions, key commands, what to do/avoid.
 
-## Day 4 (Thu) — Hooks System `~7h`
+## Day 4 (Thu) — Hooks System `~7h` ✅
 **Tracker:** `start "Hooks system"`
 
 - **Learn (3h):** hook types — PreToolUse, PostToolUse, Stop, etc. What event fires when, and
@@ -50,7 +50,7 @@ ratio is intentional — you learn this tool by driving it, not reading about it
   `Write` to log a toast). Trace it from `.claude/settings.json` → script → notification.
 - **Practice (4h):** design your own hook on paper, then stub it. Decide its trigger and effect.
 
-## Day 5 (Fri) — Build Your Custom Hook `~7h`
+## Day 5 (Fri) — Build Your Custom Hook `~7h` ✅
 **Tracker:** `start "Hooks system"` (continue)
 
 - **Build (all day):** implement a custom hook for your fresh project. Ideas: a PostToolUse
@@ -58,7 +58,7 @@ ratio is intentional — you learn this tool by driving it, not reading about it
   hook that blocks edits to a protected path. Wire it into `.claude/settings.json` and test it
   end-to-end.
 
-## Day 6 (Sat) — Ship, Review & Log `~6h`
+## Day 6 (Sat) — Ship, Review & Log `~6h` ✅
 **Tracker:** `start "CLAUDE.md & project context"` (wrap) / `Hooks system`
 
 - **Finish the ship artifact:** fresh project + tailored `CLAUDE.md` + working custom hook.
@@ -75,7 +75,7 @@ See [week1-gaps.md](week1-gaps.md) for session-by-session gap log.
 
 ## Week 1 Definition of Done
 - [x] Fresh project exists with a real, tailored `CLAUDE.md`
-- [ ] One custom hook you wrote, wired in and firing correctly
+- [x] One custom hook you wrote, wired in and firing correctly
 - [x] You can explain the permissions model using the wildcard-fix case study
 - [x] "How Claude Code works" notes written in your own words
-- [ ] All study blocks logged; at least one Discovery Log entry
+- [x] All study blocks logged; at least one Discovery Log entry
