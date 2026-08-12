@@ -48,7 +48,7 @@ server (both share the same `SessionManager` + database).
 - If no time is given, `cli.py` uses the current Windows local time automatically.
 - To override: include "started at 14:30" or "ended at 16:00" — pass it as the time argument.
 - Week runs Monday–Saturday. Sunday is a rest day (never counted toward weekly goal).
-- Weekly goal: **40 hours** (≈ 6.7 h/day across 6 days).
+- Weekly goal: **30 hours** (5 h/day across 6 days).
 
 ## Data Files
 
