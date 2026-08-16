@@ -1,4 +1,0 @@
-How Claude Code Works?
-Claude is an agentic coding assistant, it does not require the user to approve each decision as it can read and write files on its own.
-It can debug whole systems and has to option to connect pluggins such as skills and mcps which give it hands and feet to reach APIs, 
-websites, databases, etc.

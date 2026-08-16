@@ -5,3 +5,9 @@ data/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Personal study material — not part of the tool
+docs/weekly-plans/
+docs/startup-study-plan.md
+docs/design-patterns-to-ai-architectures.md
+notes.txt

@@ -145,6 +145,9 @@ class SessionManager:
         if session is None:
             raise SessionError("No session is currently open.")
 
+        if session["segments"][-1]["endTime"] is None:
+            raise SessionError("Session is already active — did you mean pause?")
+
         last_topic = session["segments"][-1]["topic"]
         session["segments"].append({"topic": last_topic, "startTime": time, "endTime": None})
         self._store.write_current(session)
@@ -154,8 +157,14 @@ class SessionManager:
         if session is None:
             raise SessionError("No session is currently open.")
 
-        self._close_open_segment(session, time)
-        session["endTime"] = time
+        if any(seg["endTime"] is None for seg in session["segments"]):
+            self._close_open_segment(session, time)
+            session["endTime"] = time
+        else:
+            # Paused session: study already stopped when the last segment closed.
+            # Stamping `time` ("now") would record when `done` was typed — which can be
+            # minutes or a day after the fact (see docs/sessions-db-fix-plan.md).
+            session["endTime"] = session["segments"][-1]["endTime"]
         self._store.append_completed(session)
         self._store.delete_current()
         return session

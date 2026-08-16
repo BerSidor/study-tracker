@@ -97,6 +97,46 @@ def test_start_while_active_raises():
         sm.start_session("Claude Code hooks", "10:00", date="2026-01-15")
 
 
+def test_close_while_paused_uses_last_segment_end():
+    store = InMemoryStore()
+    sm = SessionManager(store)
+
+    sm.start_session("MCP servers", "09:00", date="2026-01-15")
+    sm.pause_session("10:00")
+    session = sm.close_session("14:30")  # `done` typed hours after study stopped
+
+    assert session["endTime"] == "10:00"
+    assert session["segments"] == [
+        {"topic": "MCP servers", "startTime": "09:00", "endTime": "10:00"}
+    ]
+
+
+def test_close_while_paused_next_day_uses_last_segment_end():
+    # The stale-`done` shape from docs/sessions-db-fix-plan.md: session paused at 18:59,
+    # `done` typed at 01:41 the next day. Must not stamp 01:41 nor raise DurationError.
+    store = InMemoryStore()
+    sm = SessionManager(store)
+
+    sm.start_session("MCP servers", "11:40", date="2026-06-05")
+    sm.pause_session("18:59")
+    session = sm.close_session("01:41")
+
+    assert session["endTime"] == "18:59"
+
+
+def test_close_with_open_segment_still_closes_at_given_time():
+    store = InMemoryStore()
+    sm = SessionManager(store)
+
+    sm.start_session("MCP servers", "09:00", date="2026-01-15")
+    sm.pause_session("10:00")
+    sm.resume_session("10:30")
+    session = sm.close_session("11:15")  # active at close — endTime is "now" as before
+
+    assert session["endTime"] == "11:15"
+    assert session["segments"][-1]["endTime"] == "11:15"
+
+
 def test_close_while_idle_raises():
     store = InMemoryStore()
     sm = SessionManager(store)
@@ -111,6 +151,19 @@ def test_switch_while_idle_raises():
 
     with pytest.raises(SessionError):
         sm.switch_topic("Claude Code hooks", "10:00")
+
+
+def test_resume_while_already_active_raises_and_does_not_mutate():
+    store = MockStore()
+    sm = SessionManager(store)
+    sm.start_session("MCP servers", "09:00", date="2026-01-15")
+    writes_before = store.write_count
+
+    with pytest.raises(SessionError, match="already active"):
+        sm.resume_session("09:30")
+
+    assert store.write_count == writes_before
+    assert len(store.read_current()["segments"]) == 1
 
 
 # ── reversed-time guard ────────────────────────────────────────────────────────

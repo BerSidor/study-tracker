@@ -57,6 +57,7 @@ A named category that groups related Topics for weekly reporting. The canonical 
 | Idle          | `switchTopic`   | Error — "No session is open — did you mean start?"      |
 | Active        | `pauseSession`  | stays Active, closes current Segment at pause time      |
 | Active        | `resumeSession` | stays Active, opens new Segment at resume time          |
+| Active (current Segment already open) | `resumeSession` | Error — no data mutated |
 
 No silent failures. Every invalid transition surfaces a clear error message. No data is mutated on error.
 

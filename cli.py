@@ -88,6 +88,8 @@ def main():
 
         elif args.command == "done":
             session = sm.close_session(t)
+            if session["endTime"] != t:
+                print(f"Closed at last activity ({session['endTime']}), not {t} — session was paused.")
             payload = build_sync_payload(session)
             print_session_summary(payload)
 
